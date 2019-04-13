@@ -18,3 +18,7 @@ According to the paper:[EPNP](https://icwww.epfl.ch/~lepetit/papers/lepetit_ijcv
 
 - Project EPNP
 - summary report(PPT) 
+
+✅ 环境配置 cmake,opencv343,eigen
+✅ feature extraction, matching
+[!img](https://wx3.sinaimg.cn/mw690/c7716318ly1g2172ibxq1j20ze0dx7wh.jpg)
