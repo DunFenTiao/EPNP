@@ -11,7 +11,7 @@ include_directories(
     "/usr/local/include/eigen3/"
 )
 
-add_executable(opencvtest test.cpp)
+add_executable(opencvtest test.cpp eigenEPNP.cpp)
 target_link_libraries(opencvtest
 	${OpenCV_LIBS}
 ) 
