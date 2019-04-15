@@ -5,11 +5,13 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
-#include <Eigen/Core>
-#include <Eigen/Geometry>
+
+
+#include "eigenEPNP.h"
 
 using namespace cv;
 using namespace std;
+using namespace Eigen;
 
 void find_feature_matches ( const Mat& img_1, const Mat& img_2,
                             std::vector<KeyPoint>& keypoints_1,
@@ -17,7 +19,6 @@ void find_feature_matches ( const Mat& img_1, const Mat& img_2,
                             std::vector< DMatch >& matches );
 
 Point2d pixel2cam ( const Point2d& p, const Mat& K );
-
 
 int main(int argc, char** argv){
 	cout << "Hello EPNP" << endl;
@@ -57,8 +58,75 @@ int main(int argc, char** argv){
 
     cout<<"3d-2d pairs: "<<pts_3d.size() <<endl;
 
+    // 用opencv 自带方法来解PNP
+    cout << "---using opencv solvePNP---" << endl;
+    Mat r, t;
+    solvePnP ( pts_3d, pts_2d, K, Mat(), r, t, false,cv::SOLVEPNP_EPNP); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+    Mat R;
+    cv::Rodrigues ( r, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
+    
+    cout << "R1: " << R << endl;;
+    cout << "t1:" << t << endl;
+    
+    // 用eigen 求EPNP
+    cout << "---using egien to solve EPNP---" << endl;
+    
+    // 输入转化
+	  Eigen::MatrixXd points3d(pts_3d.size(),3);
+    Eigen::MatrixXd points2d(pts_2d.size(),2);
+   
+    for(int i = 0; i< pts_3d.size(); i++){
+      points3d(i,0) = pts_3d[i].x;
+      points3d(i,1) = pts_3d[i].y;
+      points3d(i,2) = pts_3d[i].z;
+    }
+   
+
+    for(int i = 0; i< pts_2d.size(); i++){
+      points2d(i,0) = pts_2d[i].x;
+      points2d(i,1) = pts_2d[i].y; 
+    }
+    
+    Eigen::Matrix3d KK;
+    KK << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1;
+    
+    //EPnPEigen(Eigen::MatrixXd& points3d, Eigen::MatrixXd& points2d, Eigen::Matrix3d& K);
+    EPnPEigen test(points3d, points2d, KK);
+    test.computePose();
+   
+     
+    
+
+    
+     //    p1w-c1w
+    //PWO = ...
+    //    pn2-c1w
+    // PWO*PWO^T的特征值和特征向量
+     
+     //Sum aijfuxcj + aij*(uc-ui)zcj = 0;
+    //Sum aijfvycj + aij*(vc-vi)zcj = 0;
+     //Mx = 0
+
+
+    //根据旋转矩阵求坐标旋转角
+    // theta_x = atan2(R.at<double>(2, 1), R.at<double>(2, 2));
+    // theta_y = atan2(-R.at<double>(2, 0),
+    // sqrt(R.at<double>(2, 1)*R.at<double>(2, 1) + R.at<double>(2, 2)*R.at<double>(2, 2)));
+    // theta_z = atan2(R.at<double>(1, 0), R.at<double>(0, 0));
+
+    //将弧度转化为角度
+    // theta_x = theta_x * (180 / PI);
+    //theta_y = theta_y * (180 / PI);
+    // theta_z = theta_z * (180 / PI);
+
+
+
     return 0;
 }
+
+
+ 
+ 
 
 void find_feature_matches ( const Mat& img_1, const Mat& img_2,
                             std::vector<KeyPoint>& keypoints_1,
@@ -111,10 +179,10 @@ void find_feature_matches ( const Mat& img_1, const Mat& img_2,
     }
 
     //show
-    Mat img_goodmatch;
-    drawMatches(img_1, keypoints_1, img_2, keypoints_2, matches, img_goodmatch);
-    imshow("good matches", img_goodmatch);
-    waitKey(0);
+    //Mat img_goodmatch;
+    //drawMatches(img_1, keypoints_1, img_2, keypoints_2, matches, img_goodmatch);
+    //imshow("good matches", img_goodmatch);
+    //waitKey(0);
 }
 
 Point2d pixel2cam ( const Point2d& p, const Mat& K )
