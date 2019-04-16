@@ -1,9 +1,3 @@
-/* Copyright 2018, Jesse Chen
-* This is a EPnP implementation with Eigen only.
-*
-* References:
-*
-*/
 #ifndef EPNP_EIGEN_H_
 #define EPNP_EIGEN_H_
 

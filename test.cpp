@@ -72,7 +72,7 @@ int main(int argc, char** argv){
     cout << "---using egien to solve EPNP---" << endl;
     
     // 输入转化
-	  Eigen::MatrixXd points3d(pts_3d.size(),3);
+	Eigen::MatrixXd points3d(pts_3d.size(),3);
     Eigen::MatrixXd points2d(pts_2d.size(),2);
    
     for(int i = 0; i< pts_3d.size(); i++){
@@ -95,17 +95,6 @@ int main(int argc, char** argv){
     test.computePose();
    
      
-    
-
-    
-     //    p1w-c1w
-    //PWO = ...
-    //    pn2-c1w
-    // PWO*PWO^T的特征值和特征向量
-     
-     //Sum aijfuxcj + aij*(uc-ui)zcj = 0;
-    //Sum aijfvycj + aij*(vc-vi)zcj = 0;
-     //Mx = 0
 
 
     //根据旋转矩阵求坐标旋转角

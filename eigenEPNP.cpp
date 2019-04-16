@@ -6,13 +6,15 @@
 
 #include <iostream>
 using namespace std;
+using namespace Eigen;
 
 
 EPnPEigen::EPnPEigen(Eigen::MatrixXd& points3d, Eigen::MatrixXd& points2d, Eigen::Matrix3d& K) {
+  //初始化3D参考点pwi,2D参考点，点个数N
   reference_3d_points_ = points3d;
   reference_2d_points_ = points2d;  
   reference_points_count_ = reference_3d_points_.rows();
-
+  //初始化4个控制点pci
   control_3d_points_ = Eigen::MatrixXd::Zero(4, 3);
   control_3d_points_camera_coord_ = Eigen::MatrixXd::Zero(4, 3);
   bary_centric_coord_ = Eigen::MatrixXd::Zero(reference_points_count_, 4);
@@ -22,7 +24,7 @@ EPnPEigen::EPnPEigen(Eigen::MatrixXd& points3d, Eigen::MatrixXd& points2d, Eigen
   fv_ = K(1, 1);
   uc_ = K(0, 2);
   vc_ = K(1, 2);
-  cout << "finish intialzition" << endl;
+  
 
 }
 
@@ -30,28 +32,60 @@ EPnPEigen::EPnPEigen(Eigen::MatrixXd& points3d, Eigen::MatrixXd& points2d, Eigen
 void EPnPEigen::chooseControlPoints(void){
   double lambda;
   Eigen::VectorXd eigvec;
+  //第一个控制点为重心，cw1= sum{pwi} / N
   Eigen::MatrixXd pointsSum = reference_3d_points_.colwise().sum();
   pointsSum = pointsSum/reference_points_count_;
   control_3d_points_.row(0) = pointsSum;
-
+  //去中心，A = pwi-cw1
   Eigen::MatrixXd centroidMat = pointsSum.replicate(reference_points_count_, 1);
   Eigen::MatrixXd PW0 = reference_3d_points_ - centroidMat;
+  //计算ATA特征值
   Eigen::MatrixXd PW0t = PW0;
   PW0t.transposeInPlace();
   Eigen::MatrixXd PW0tPW0 = PW0t * PW0;
 
+
+  //计算剩下三个控制点
+  /*
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(PW0tPW0);
   Eigen::VectorXd eigenval = es.eigenvalues();
   Eigen::VectorXd k = (eigenval/reference_points_count_).cwiseSqrt();
-
-  // Jesse: will not be included in the release code.
   int sign_value[3] = {1, -1, -1};
 
   for (int i = 2; i >= 0; i--){
     lambda = k(i);
     eigvec = es.eigenvectors().col(i);
+    cout << "i" << i << endl;
+    cout << "lamda" << lambda << endl;
+    cout << "eigvec" << eigvec << endl;
+    cout << "eigvec.transpose()" << eigvec.transpose() << endl;
     control_3d_points_.row(3-i) = control_3d_points_.row(0) + sign_value[i] * lambda * eigvec.transpose();
   }
+  */
+  
+  
+  //PW0tPW0=S*U*Vt
+  double k;
+  JacobiSVD<Eigen::MatrixXd> svd(PW0tPW0, ComputeThinU | ComputeThinV );
+  Matrix3d V = svd.matrixV(), U = svd.matrixU();
+  Matrix3d S = U.inverse() * PW0tPW0 * V.transpose().inverse();
+  MatrixXd UT= U.transpose();
+  cout << "UT" << UT << endl;
+  cout << "V" << V << endl;
+  cout << "U" << U << endl;
+  cout << "S" << S << endl;
+  
+  //计算剩下三个控制点
+  
+  for (int i = 1; i < 4; i++){
+    for(int j =0 ; j < 3 ; j++){
+      k = sqrt(S(i-1,i-1)/reference_points_count_);
+      control_3d_points_(i,j) = control_3d_points_(0,j)+ k * UT(i-1,j);
+    }
+  }
+  
+  cout << "control_3d_points_" << control_3d_points_ << endl;
+  
 
 }
 
@@ -147,7 +181,6 @@ void EPnPEigen::findBetasApprox1(const Eigen::MatrixXd& L6x10, const Eigen::Vect
 
   //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   Eigen::VectorXd B = L6x4.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
-  //Eigen::VectorXd B = L6x4.BDCSVD(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
 
   if (B(0) < 0) {
     betas[0] = sqrt(-B(0));
@@ -301,14 +334,6 @@ void EPnPEigen::estimateRt(Eigen::Matrix3d& R, Eigen::Vector3d& t){
 
   t = P0c - R*P0w;  
 
-  cout << "detR = " << detR << endl;
-
-  //EPnPEigenDebugTool tool;
-  // tool.printForMatlab("M = ", M);
-  // tool.printForMatlab("U = ", U);
-  // tool.printForMatlab("V = ", V);
-  // tool.printForMatlab("R = ", R);
-  // tool.printForMatlab("t = ", t);
 }
 
 
@@ -335,8 +360,8 @@ void EPnPEigen::computePose(){
   Eigen::VectorXd eigenval = es.eigenvalues();
   Eigen::MatrixXd eigvector = es.eigenvectors();
 
-  eigvector.block(0, 2, 12, 1) = -eigvector.block(0, 2, 12, 1);  // Jesse: only for debug
-  eigvector.block(0, 3, 12, 1) = -eigvector.block(0, 3, 12, 1);  // Jesse: only for debug
+  eigvector.block(0, 2, 12, 1) = -eigvector.block(0, 2, 12, 1);  
+  eigvector.block(0, 3, 12, 1) = -eigvector.block(0, 3, 12, 1);  
 
   Eigen::MatrixXd L6x10 = Eigen::MatrixXd::Zero(6, 10);
   Eigen::VectorXd rho(6, 1);
@@ -354,10 +379,5 @@ void EPnPEigen::computePose(){
   computeRt(eigvector, betas[1], R1, t1);
   
   cout << "R1: " << R1 << endl;
-  cout << "t1:" << t1 << endl;
-
-
-  //EPnPEigenDebugTool tool;
-  //tool.printForMatlab("pcs = ", reference_3d_points_camera_coord_);
-  //tool.printForMatlab("point3d_col_sum = ", control_3d_points_);    
+  cout << "t1:" << t1 << endl; 
 }
