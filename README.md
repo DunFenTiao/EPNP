@@ -22,7 +22,8 @@ According to the paper:[EPNP](https://icwww.epfl.ch/~lepetit/papers/lepetit_ijcv
 ✅ 环境配置 cmake,opencv343,eigen
 ✅ feature extraction, matching
 ✅ opencv solver,eigen solver
-todo: gtest, PPT summary
+✅ 原理总结，画图
+todo: gtest,
 ![img](https://wx3.sinaimg.cn/mw690/c7716318ly1g2172ibxq1j20ze0dx7wh.jpg)
 
 
@@ -51,7 +52,7 @@ t1: -0.127002
  0.0567606
 
 # EPNP 原理总结
-
+> 如果公式无法在github上显示，need chrome plugin to show mathjax with[mathjax plugin for github ](https://chrome.google.com/webstore/detail/mathjax-plugin-for-github/ioemnmodlmafdkllaclgeombjnmnbima)
 ## 选取控制点
 
 世界坐标系下3D参考点
