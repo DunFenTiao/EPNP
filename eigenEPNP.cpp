@@ -116,7 +116,7 @@ void EPnPEigen::computeBaryCentricCoordinates(){
 
 
 void EPnPEigen::calculateM(Eigen::MatrixXd& M){
-  /*求M矩阵，mx =0 其中 每一个参考点对应的M是2*6维
+  /*求M矩阵，mx =0 其中m为2n*12维，X为12*1维度 
   \sum^4_{j=1}a_{ij}f_ux^c_j+a_{ij}(u_c-u_i)z^c_j=0,\\
   \sum^4_{j=1}a_{ij}f_vy^c_j+a_{ij}(v_c-v_i)z^c_j=0,
   [ aij*fu,   0  ,aij*uci
@@ -142,10 +142,13 @@ void EPnPEigen::calculateM(Eigen::MatrixXd& M){
 
 
 void EPnPEigen::computeL6x10(const Eigen::MatrixXd& U, Eigen::MatrixXd& L6x10){
+  //MTM为12*2n *2n *12，特征根维度取N=4时
+  // ||cci-ccj||^2 = ||cwi-cwj||^2
+  // L6*10 * beta 10*1 = p 6*1
   Eigen::MatrixXd V = U.block(0, 0, 12, 4);
   Eigen::MatrixXd DiffMat = Eigen::MatrixXd::Zero(18, 4);
   DistPattern diff_pattern[6] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
-
+  
   for (int i = 0; i < 6; i++){
     DiffMat.block(3*i, 0, 3, 4) = V.block(3 * diff_pattern[i].a, 0, 3, 4) - V.block(3 * diff_pattern[i].b, 0, 3, 4);  	
   } 	
