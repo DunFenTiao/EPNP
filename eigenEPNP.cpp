@@ -46,6 +46,7 @@ void EPnPEigen::chooseControlPoints(void){
 
 
   //计算剩下三个控制点
+  // 1. 用特征向量，特征根来求
   /*
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(PW0tPW0);
   Eigen::VectorXd eigenval = es.eigenvalues();
@@ -63,20 +64,16 @@ void EPnPEigen::chooseControlPoints(void){
   }
   */
   
-  
-  //PW0tPW0=S*U*Vt
+  // 2. 用奇异值分解来求
   double k;
   JacobiSVD<Eigen::MatrixXd> svd(PW0tPW0, ComputeThinU | ComputeThinV );
   Matrix3d V = svd.matrixV(), U = svd.matrixU();
   Matrix3d S = U.inverse() * PW0tPW0 * V.transpose().inverse();
   MatrixXd UT= U.transpose();
-  cout << "UT" << UT << endl;
-  cout << "V" << V << endl;
-  cout << "U" << U << endl;
-  cout << "S" << S << endl;
+  //cout << U << endl;
+  //cout << V << endl;
   
-  //计算剩下三个控制点
-  
+  //计算剩下三个控制点  cwj = cw1 + sqrt(lamdba{c,j-1}) * v{c,j-1}
   for (int i = 1; i < 4; i++){
     for(int j =0 ; j < 3 ; j++){
       k = sqrt(S(i-1,i-1)/reference_points_count_);
@@ -84,22 +81,26 @@ void EPnPEigen::chooseControlPoints(void){
     }
   }
   
-  cout << "control_3d_points_" << control_3d_points_ << endl;
-  
+  //cout << "control_3d_points_" << control_3d_points_ << endl;
 
 }
 
 
 void EPnPEigen::computeBaryCentricCoordinates(){
   Eigen::MatrixXd CC(3,3);
-
+  // 其他三个控制点都减去重心控制点
   for (int i = 0; i < 3; i++){
     CC.row(i) = control_3d_points_.row(i+1) - control_3d_points_.row(0);
   }	
   CC.transposeInPlace();
 
   Eigen::MatrixXd CC_inv = CC.inverse();
-
+  // barycentric 是 4*N维矩阵,记录权重参数 1 = ai0+ai1+ai2+ai3
+  //[0,1,2,3,4,5,6] n个参考点,参考点到所有控制点 = 其他控制点到重心 * 参考点到重心
+  //[a]到重心的ai0
+  //[1]到第一个控制点ai1
+  //[2]到第一个控制点ai2
+  //[3]到第一个控制点ai3
   Eigen::MatrixXd pt_3d_diff_mat(1,3);
   Eigen::Vector3d pt_3d_diff_vec;
   double a;
@@ -115,6 +116,12 @@ void EPnPEigen::computeBaryCentricCoordinates(){
 
 
 void EPnPEigen::calculateM(Eigen::MatrixXd& M){
+  /*求M矩阵，mx =0 其中 每一个参考点对应的M是2*6维
+  \sum^4_{j=1}a_{ij}f_ux^c_j+a_{ij}(u_c-u_i)z^c_j=0,\\
+  \sum^4_{j=1}a_{ij}f_vy^c_j+a_{ij}(v_c-v_i)z^c_j=0,
+  [ aij*fu,   0  ,aij*uci
+      0   ,aij*fv,aij*vci ] * [x,y,z]T =0
+  */
   double uci, vci, barycentric;
   for (int i = 0; i < reference_points_count_; i++){
   	uci = uc_ - reference_2d_points_(i, 0);
