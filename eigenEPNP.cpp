@@ -367,9 +367,6 @@ void EPnPEigen::computePose(){
   Eigen::VectorXd eigenval = es.eigenvalues();
   Eigen::MatrixXd eigvector = es.eigenvectors();
 
-  eigvector.block(0, 2, 12, 1) = -eigvector.block(0, 2, 12, 1);  
-  eigvector.block(0, 3, 12, 1) = -eigvector.block(0, 3, 12, 1);  
-
   Eigen::MatrixXd L6x10 = Eigen::MatrixXd::Zero(6, 10);
   Eigen::VectorXd rho(6, 1);
 
