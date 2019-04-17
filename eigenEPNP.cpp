@@ -2,6 +2,10 @@
 * This is a EPnP implementation with Eigen only.
 *
 */
+/*
+COMPLETE BY 
+JIAYAOMA 2019.4.17
+*/
 #include "eigenEPNP.h"
 #include <gtest/gtest.h>
 
@@ -186,13 +190,14 @@ void EPnPEigen::computeRho(Eigen::VectorXd& rho){
 void EPnPEigen::findBetasApprox1(const Eigen::MatrixXd& L6x10, const Eigen::VectorXd& rho, double* betas){
   Eigen::MatrixXd L6x4(6, 4);
 
-  L6x4.block(0, 0, 6, 2) = L6x10.block(0, 0, 6, 2);
+  L6x4.block(0, 0, 6, 1) = L6x10.block(0, 0, 6, 1);
+  L6x4.block(0, 1, 6, 1) = L6x10.block(0, 1, 6, 1);
   L6x4.block(0, 2, 6, 1) = L6x10.block(0, 3, 6, 1);
   L6x4.block(0, 3, 6, 1) = L6x10.block(0, 6, 6, 1);
 
   //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   Eigen::VectorXd B = L6x4.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
-
+  
   if (B(0) < 0) {
     betas[0] = sqrt(-B(0));
     betas[1] = -B(1) / betas[0];
@@ -207,6 +212,59 @@ void EPnPEigen::findBetasApprox1(const Eigen::MatrixXd& L6x10, const Eigen::Vect
 
 }
 
+// betas10        = [B11 B12 B22 B13 B23 B33 B14 B24 B34 B44]
+// betas_approx_2 = [B11 B12 B22                            ]              N=2
+void EPnPEigen::findBetasApprox2(const Eigen::MatrixXd& L6x10, const Eigen::VectorXd& rho, double* betas){
+  Eigen::MatrixXd L6x3(6, 3);
+
+  L6x3.block(0, 0, 6, 1) = L6x10.block(0, 0, 6, 1);
+  L6x3.block(0, 1, 6, 1) = L6x10.block(0, 1, 6, 1);
+  L6x3.block(0, 2, 6, 1) = L6x10.block(0, 2, 6, 1);
+  
+
+  //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
+  Eigen::VectorXd B = L6x3.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
+  
+  if (B(0) < 0) {
+    betas[0] = sqrt(-B(0));
+    betas[1] = (B(2)<0)?sqrt(-(B(2))):0.0;
+   
+  } else {
+    betas[0] = sqrt(B(0));
+    betas[1] = (B(2)>0)?sqrt((B(2))):0.0;
+  }
+  if (B[1] < 0) betas[0] = -betas[0];
+  betas[2] = 0.0;
+  betas[3] = 0.0;
+}
+
+// betas10        = [B11 B12 B22 B13 B23 B33 B14 B24 B34 B44]
+// betas_approx_3 = [B11 B12 B22 B13 B23                    ]               N=3
+void EPnPEigen::findBetasApprox3(const Eigen::MatrixXd& L6x10, const Eigen::VectorXd& rho, double* betas){
+  Eigen::MatrixXd L6x5(6, 5);
+
+  L6x5.block(0, 0, 6, 1) = L6x10.block(0, 0, 6, 1);
+  L6x5.block(0, 1, 6, 1) = L6x10.block(0, 1, 6, 1);
+  L6x5.block(0, 2, 6, 1) = L6x10.block(0, 2, 6, 1);
+  L6x5.block(0, 3, 6, 1) = L6x10.block(0, 3, 6, 1);
+  L6x5.block(0, 4, 6, 1) = L6x10.block(0, 4, 6, 1);
+  
+
+  //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
+  Eigen::VectorXd B = L6x5.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
+  
+  if (B(0) < 0) {
+    betas[0] = sqrt(-B(0));
+    betas[1] = (B(2)<0)?sqrt(-(B(2))):0.0;
+   
+  } else {
+    betas[0] = sqrt(B(0));
+    betas[1] = (B(2)>0)?sqrt((B(2))):0.0;
+  }
+  if (B[1] < 0) betas[0] = -betas[0];
+  betas[2] = B(3) / betas[0];
+  betas[3] = 0.0;
+}
 
 void EPnPEigen::computeResiduals(const Eigen::MatrixXd& U, double betas[4], Eigen::VectorXd& residuals){
   Eigen::MatrixXd V = U.block(0, 0, 12, 4);
@@ -348,16 +406,37 @@ void EPnPEigen::estimateRt(Eigen::Matrix3d& R, Eigen::Vector3d& t){
 }
 
 
-void EPnPEigen::computeRt(const Eigen::MatrixXd&U, double betas[4], Eigen::Matrix3d& R, Eigen::Vector3d& t){
+double EPnPEigen::computeRt(const Eigen::MatrixXd&U, double betas[4], Eigen::Matrix3d& R, Eigen::Vector3d& t){
   computeControlPointsUnderCameraCoord(U, betas);
   computeReferencePointsUnderCameraCoord();
   solveForSign();
 
   estimateRt(R, t);
+  return reprojectionError(R, t);
+}
+
+double EPnPEigen::reprojectionError(Eigen::Matrix3d& R, Eigen::Vector3d& t)
+{
+  double sum2 = 0.0;
+
+  for(int i = 0; i < reference_points_count_; i++) {
+
+    
+    double Xc = R.row(0).dot(reference_3d_points_.row(i)) + t(0);                                // pws经外参（R和t）变为pcs
+    double Yc = R.row(1).dot(reference_3d_points_.row(i)) + t(1);
+    double inv_Zc = 1.0 / R.row(2).dot(reference_3d_points_.row(i)) + t(2);
+    double ue = uc_ + fu_ * Xc * inv_Zc;                               // pcs经内参变为uv
+    double ve = vc_ + fv_ * Yc * inv_Zc;
+    double u = reference_2d_points_(i,0), v = reference_2d_points_(i,1);
+
+    sum2 += sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );       // 计算与真实2d点之间的误差
+  }
+
+  return sum2 / reference_points_count_;
 }
 
 
-void EPnPEigen::computePose(){
+void EPnPEigen::computePose(Eigen::Matrix3d &R, Eigen::Vector3d &t){
   // 选择4个控制点（质点+3个主轴方向的单位向量）
   chooseControlPoints();
   // 根据4个控制点计算所有3d空间点的阿尔法系数
@@ -373,31 +452,53 @@ void EPnPEigen::computePose(){
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(MtM);
   Eigen::VectorXd eigenval = es.eigenvalues();
   Eigen::MatrixXd eigvector = es.eigenvectors();
+
   // L * betas = rho
-  // N = 4 时， L为6*10的矩阵
-  // rho 一直为 6*1 的矩阵，记录着4个控制点之间各自的距离
+  // rho 一直为 6*1 的矩阵，记录着4个控制点之间各自的距离; N=4;L为6*10的矩阵
   Eigen::MatrixXd L6x10 = Eigen::MatrixXd::Zero(6, 10);
   Eigen::VectorXd rho(6, 1);
-
   computeL6x10(eigvector, L6x10);
   computeRho(rho);
 
-  double betas[4][4];
-  // 算出4个betas的初值 （N=4: B1 B2 B3 B4）
-  // N=4;
+  /* 算出4个betas的初值 */
+  double betas[4][4],rep_errors[4];;
+  
+  Eigen::Matrix3d RR = Eigen::Matrix3d::Zero(3,3);
+  Eigen::Vector3d tt = Eigen::Vector3d::Zero(3,1);
+  vector<Eigen::Matrix3d> Rs(4,RR);
+  vector<Eigen::Vector3d> ts(4,tt);
+  
+  // （N=4: B1 B2 B3 B4）
   findBetasApprox1(L6x10, rho, betas[1]);
-  //printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);
-  // 根据L*betas-rho的误差，迭代精确betas
+  printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);
   doGaussNewtonOptimization(eigvector, L6x10, betas[1]);
-  //printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);  
-  Eigen::Matrix3d R1 = Eigen::Matrix3d::Zero(3,3);
-  Eigen::Vector3d t1 = Eigen::Vector3d::Zero(3,1);
+  printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);
+  rep_errors[1]=computeRt(eigvector, betas[1], Rs[1], ts[1]);
+
+  // （N=2: B1 B2 (B3B4为0)）
+  findBetasApprox2(L6x10, rho, betas[2]);
+  printf("betas[2] = %f, %f, %f, %f\n", betas[2][0], betas[2][1], betas[2][2], betas[2][3]);
+  doGaussNewtonOptimization(eigvector, L6x10, betas[2]);
+  rep_errors[2]=computeRt(eigvector, betas[2], Rs[2], ts[2]);
+  printf("betas[2] = %f, %f, %f, %f\n", betas[2][0], betas[2][1], betas[2][2], betas[2][3]);
   
-  computeRt(eigvector, betas[1], R1, t1);
-  // TODO：
-  // N=3,2,1,算重投影误差，选小的
-  // 利用v和betas，先求出4个ccs，再求出pcs，然后利用pcs和pws计算R和t，最后计算重投影误差
+  // （N=3: B1 B2 B3 (B4为0)）
+  findBetasApprox3(L6x10, rho, betas[3]);
+  printf("betas[3] = %f, %f, %f, %f\n", betas[3][0], betas[3][1], betas[3][2], betas[3][3]);
+  doGaussNewtonOptimization(eigvector, L6x10, betas[3]);
+  rep_errors[3]=computeRt(eigvector, betas[3], Rs[3], ts[3]);
+  printf("betas[3] = %f, %f, %f, %f\n", betas[3][0], betas[3][1], betas[3][2], betas[3][3]);
   
-  cout << "R1: " << R1 << endl;
-  cout << "t1:" << t1 << endl; 
+
+  // 选出重投影误差最小的R和t
+  int N = 1;
+  if (rep_errors[2] < rep_errors[1]) { N = 2;}                              
+  if (rep_errors[3] < rep_errors[N]) { N = 3;}
+  cout << "rep_errors[1]: " << rep_errors[1] << endl;
+  cout << "rep_errors[2]: " << rep_errors[2] << endl;
+  cout << "rep_errors[3]: " << rep_errors[3] << endl;
+  cout << "choose N= " << N << endl;
+
+  R = Rs[N];
+  t = ts[N];
 }

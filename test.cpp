@@ -8,6 +8,7 @@
 
 
 #include "eigenEPNP.h"
+#include <gtest/gtest.h>
 
 using namespace cv;
 using namespace std;
@@ -38,7 +39,8 @@ int main(int argc, char** argv){
     vector<KeyPoint> keypoints_1, keypoints_2;
     vector<DMatch> matches;
     find_feature_matches ( img_1, img_2, keypoints_1, keypoints_2, matches );
-    cout<<"一共找到了"<<matches.size() <<"组匹配点"<<endl;
+    //cout<<"一共找到了"<<matches.size() <<"组匹配点"<<endl;
+    
 
     // 建立3D点
     Mat d1 = imread ( "../data/1_depth.png", CV_LOAD_IMAGE_UNCHANGED );       // 深度图为16位无符号数，单通道图像
@@ -65,8 +67,8 @@ int main(int argc, char** argv){
     Mat R;
     cv::Rodrigues ( r, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
     
-    cout << "R1: " << R << endl;;
-    cout << "t1:" << t << endl;
+    cout << "R: " << R << endl;;
+    cout << "t:" << t << endl;
     
     // 用eigen 求EPNP
     cout << "---using egien to solve EPNP---" << endl;
@@ -89,13 +91,14 @@ int main(int argc, char** argv){
     
     Eigen::Matrix3d KK;
     KK << 520.9, 0, 325.1, 0, 521.0, 249.7, 0, 0, 1;
-    
-    //EPnPEigen(Eigen::MatrixXd& points3d, Eigen::MatrixXd& points2d, Eigen::Matrix3d& K);
+    Eigen::Matrix3d RR = Eigen::Matrix3d::Zero(3,3);
+    Eigen::Vector3d tt = Eigen::Vector3d::Zero(3,1);
     EPnPEigen test(points3d, points2d, KK);
-    test.computePose();
+    test.computePose(RR,tt);
+    cout << "RR: " << RR<< endl;
+    cout << "tt:" << tt << endl; 
    
-     
-
+    
 
     //根据旋转矩阵求坐标旋转角
     // theta_x = atan2(R.at<double>(2, 1), R.at<double>(2, 2));
