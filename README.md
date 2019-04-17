@@ -59,8 +59,13 @@ N个世界坐标系中的3D参考点坐标
 用四个控制点的权重和来表示参考点
 （express the n 3D points as a weighted sum of four virtual control points 
 ）
-![控制点][2]
+
 ![步骤][3]
+![控制点][2]
+![PNP问题][4]
+![参考点][5]
+![求解beta][6]
+
 
 # 推导
 > 见页面 [推导](https://www.zybuluo.com/snuffles/note/1455004)
@@ -69,3 +74,6 @@ N个世界坐标系中的3D参考点坐标
   [1]: https://wx1.sinaimg.cn/mw690/c7716318ly1g24mz3ytzbj20cy05xq3j.jpg
   [2]: https://wx3.sinaimg.cn/mw690/c7716318ly1g24kwqwl4vj20i00ao3zr.jpg
   [3]: https://wx4.sinaimg.cn/mw690/c7716318ly1g24mo613j1j20e708itaq.jpg
+  [4]: https://wx2.sinaimg.cn/mw690/c7716318ly1g265jck9glj20go0biwg9.jpg
+  [5]: https://wx3.sinaimg.cn/mw690/c7716318ly1g265jckm8fj20fi0arabd.jpg
+  [6]: https://wx2.sinaimg.cn/mw690/c7716318ly1g265jckikkj20f709s0to.jpg
