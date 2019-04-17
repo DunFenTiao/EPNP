@@ -3,6 +3,7 @@
 *
 */
 #include "eigenEPNP.h"
+#include <gtest/gtest.h>
 
 #include <iostream>
 using namespace std;
@@ -357,19 +358,24 @@ void EPnPEigen::computeRt(const Eigen::MatrixXd&U, double betas[4], Eigen::Matri
 
 
 void EPnPEigen::computePose(){
+  // 选择4个控制点（质点+3个主轴方向的单位向量）
   chooseControlPoints();
+  // 根据4个控制点计算所有3d空间点的阿尔法系数
+  // pi = ai_0*cws0 + ai_1*cws1 + ai_2*cws2 + ai_3*cws3
   computeBaryCentricCoordinates();	
-
+  // Mx=0 M为2n*12的矩阵，x为4个控制点在相机坐标系下的xyz值，为12*1矩阵
   Eigen::MatrixXd M(2*reference_points_count_, 12);
   M = Eigen::MatrixXd::Zero(2*reference_points_count_, 12);
   calculateM(M);
   
   Eigen::MatrixXd MtM = M.transpose() * M;
-
+  // 也可以对M^tM进行SVD分解，得到的特征向量既是M的右奇异向量
   Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(MtM);
   Eigen::VectorXd eigenval = es.eigenvalues();
   Eigen::MatrixXd eigvector = es.eigenvectors();
-
+  // L * betas = rho
+  // N = 4 时， L为6*10的矩阵
+  // rho 一直为 6*1 的矩阵，记录着4个控制点之间各自的距离
   Eigen::MatrixXd L6x10 = Eigen::MatrixXd::Zero(6, 10);
   Eigen::VectorXd rho(6, 1);
 
@@ -377,13 +383,20 @@ void EPnPEigen::computePose(){
   computeRho(rho);
 
   double betas[4][4];
+  // 算出4个betas的初值 （N=4: B1 B2 B3 B4）
+  // N=4;
   findBetasApprox1(L6x10, rho, betas[1]);
   //printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);
+  // 根据L*betas-rho的误差，迭代精确betas
   doGaussNewtonOptimization(eigvector, L6x10, betas[1]);
   //printf("betas[1] = %f, %f, %f, %f\n", betas[1][0], betas[1][1], betas[1][2], betas[1][3]);  
   Eigen::Matrix3d R1 = Eigen::Matrix3d::Zero(3,3);
   Eigen::Vector3d t1 = Eigen::Vector3d::Zero(3,1);
+  
   computeRt(eigvector, betas[1], R1, t1);
+  // TODO：
+  // N=3,2,1,算重投影误差，选小的
+  // 利用v和betas，先求出4个ccs，再求出pcs，然后利用pcs和pws计算R和t，最后计算重投影误差
   
   cout << "R1: " << R1 << endl;
   cout << "t1:" << t1 << endl; 
