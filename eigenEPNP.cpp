@@ -195,7 +195,7 @@ void EPnPEigen::findBetasApprox1(const Eigen::MatrixXd& L6x10, const Eigen::Vect
   L6x4.block(0, 2, 6, 1) = L6x10.block(0, 3, 6, 1);
   L6x4.block(0, 3, 6, 1) = L6x10.block(0, 6, 6, 1);
    /*
-  当X = B1V1+B2V2,解LB= rho,解为B11,B12,B13，其中
+  当X = B1V1+B2V2+B3V3+B4V4,解LB= rho,解为B11,B12,B13,B14其中
   B11 = B1*B1;
   B12 = B1*B2;
   B13 = B1*B4;
