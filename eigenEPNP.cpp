@@ -194,10 +194,23 @@ void EPnPEigen::findBetasApprox1(const Eigen::MatrixXd& L6x10, const Eigen::Vect
   L6x4.block(0, 1, 6, 1) = L6x10.block(0, 1, 6, 1);
   L6x4.block(0, 2, 6, 1) = L6x10.block(0, 3, 6, 1);
   L6x4.block(0, 3, 6, 1) = L6x10.block(0, 6, 6, 1);
-
+   /*
+  当X = B1V1+B2V2,解LB= rho,解为B11,B12,B13，其中
+  B11 = B1*B1;
+  B12 = B1*B2;
+  B13 = B1*B4;
+  B14 = B1*B4;
+  即
+  B1 =SQRT(B11)
+  B2 = B12/B11
+  B3 = B13/B11
+  B4 = B14/B11
+  */
+  //// 解线性方程组 求出B11 B12 B13 B14
   //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   Eigen::VectorXd B = L6x4.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   
+  // 然后再求出 B1 B2 B3 B4
   if (B(0) < 0) {
     betas[0] = sqrt(-B(0));
     betas[1] = -B(1) / betas[0];
@@ -220,11 +233,19 @@ void EPnPEigen::findBetasApprox2(const Eigen::MatrixXd& L6x10, const Eigen::Vect
   L6x3.block(0, 0, 6, 1) = L6x10.block(0, 0, 6, 1);
   L6x3.block(0, 1, 6, 1) = L6x10.block(0, 1, 6, 1);
   L6x3.block(0, 2, 6, 1) = L6x10.block(0, 2, 6, 1);
-  
-
+  /*
+  当X = B1V1+B2V2,解LB= rho,解为B11,B12,B13，其中
+  B11 = B1*B1;
+  B12 = B1*B2;
+  B22 = B2*B2;
+  B1 =SQRT(B11)
+  B2 = SQRT(B22)
+  */
+  // 解线性方程组 求出B11 B12 B22
   //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   Eigen::VectorXd B = L6x3.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   
+  // 然后再求出 B1 B2
   if (B(0) < 0) {
     betas[0] = sqrt(-B(0));
     betas[1] = (B(2)<0)?sqrt(-(B(2))):0.0;
@@ -248,11 +269,23 @@ void EPnPEigen::findBetasApprox3(const Eigen::MatrixXd& L6x10, const Eigen::Vect
   L6x5.block(0, 2, 6, 1) = L6x10.block(0, 2, 6, 1);
   L6x5.block(0, 3, 6, 1) = L6x10.block(0, 3, 6, 1);
   L6x5.block(0, 4, 6, 1) = L6x10.block(0, 4, 6, 1);
-  
+  /*
+  当X = B1V1+B2V2+B3V3,解LB= rho,解为B11,B12,B13，B22,B23,B33其中
+  B11 = B1*B1;
+  B12 = B1*B2;
+  B22 = B2*B2;
+  B1 =SQRT(B11)
+  B2 = SQRT(B22)
+  */
 
+  // 解线性方程组 求出B11 B12 B22 B13 B23
   //Eigen::VectorXd B = L6x4.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
   Eigen::VectorXd B = L6x5.jacobiSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(rho);
-  
+  // 然后再求出 B1 B2 B3
+  //B1 = sqrt = B11
+  //B2 = sqrt = B33
+  //B3 = sqrt = B13/B11
+    betas[1] = (b5[2] > 0) ? sqrt(b5[2]) : 0.0;
   if (B(0) < 0) {
     betas[0] = sqrt(-B(0));
     betas[1] = (B(2)<0)?sqrt(-(B(2))):0.0;
